@@ -871,7 +871,7 @@ class LabelConnector(QtGuiWidgets.QWidget):
         """
 
         # hide the main widget while we alter the grid, as each setVisible(True) call triggers a repaint
-        self.main_widget.setVisible(False)
+        # self.main_widget.setVisible(False)
 
         inputText = self.input.text()
 
@@ -894,7 +894,7 @@ class LabelConnector(QtGuiWidgets.QWidget):
             for button in self.highlighted_buttons:
                 button.setStyleHighlighted()
 
-        self.main_widget.setVisible(True)
+        # self.main_widget.setVisible(True)
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Escape:
