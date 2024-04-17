@@ -308,10 +308,10 @@ def wiredKnobChanged():
     elif kn == "title":
         kv = k.value()
         if titleIsLegal(kv):
-            if nuke.ask("Do you want to update the linked stamps' title?"):
-                a = retitleAnchor(n)  # Retitle anchor
-                retitleWired(a)  # Retitle wired stamps of anchor a
-                return
+            # if nuke.ask("Do you want to update the linked stamps' title?"):
+            a = retitleAnchor(n)  # Retitle anchor
+            retitleWired(a)  # Retitle wired stamps of anchor a
+            return
         else:
             nuke.message("Please set a valid title.")
         try:
@@ -420,9 +420,9 @@ def anchorKnobChanged():
     if kn == "title":
         kv = k.value()
         if titleIsLegal(kv):
-            if nuke.ask("Do you want to update the linked stamps' title?"):
-                retitleWired(n)  # Retitle wired stamps of anchor a
-                return
+            # if nuke.ask("Do you want to update the linked stamps' title?"):
+            retitleWired(n)  # Retitle wired stamps of anchor a
+            return
         else:
             nuke.message("Please set a valid title.")
         try:
@@ -1086,7 +1086,9 @@ def wired(anchor):
     backdrops_knob = nuke.Text_Knob("backdrops", "Backdrops:", " ")
     backdrops_knob.setTooltip("Labels of backdrop nodes which contain this stamp's Anchor.")
     postageStamp_knob = nuke.Boolean_Knob("postageStamp_show", "postage stamp")
-    postageStamp_knob.setTooltip("Enable the postage stamp thumbnail in this node.\nYou're seeing this because the class of this node includes the postage_stamp knob.")
+    postageStamp_knob.setTooltip(
+        "Enable the postage stamp thumbnail in this node.\nYou're seeing this because the class of this node includes the postage_stamp knob."
+    )
     postageStamp_knob.setFlag(nuke.STARTLINE)
     postageStamp_knob.setVisible("postage_stamp" in n.knobs() and nodeType(n) == "2D")
 
@@ -2063,9 +2065,9 @@ def backdropTags(node=None):
             label = re.sub("[\s]+", " ", label)
             label = re.sub("\.$", "", label)
             label = label.strip()
-            
+
             tags[label] = b
-                
+
     return tags
 
 
@@ -2669,8 +2671,8 @@ def renameTag(ns=""):
                 tags_knob.setValue(", ".join(merged_tags))
                 i += 1
             continue
-        if i > 0:
-            nuke.message("Renamed the specified tag on {} nodes.".format(str(i)))
+        # if i > 0:
+        #     nuke.message("Renamed the specified tag on {} nodes.".format(str(i)))
     return
 
 
