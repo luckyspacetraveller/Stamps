@@ -6,10 +6,13 @@ Here is a quick summary of the changes made to the original code:
 - search and create like Nuke Nodes (Character-based matching, hit Tab/Enter to create)
 - Support for colored Anchors and Backdrops
 - disable/hide Anchors (e.g. you import another nukescript as reference)
+- **CTRL+SHIFT+Drop Node** to swap nodes preserves connections
 - performance improvements
 
 ### new Shortcuts
+
 within the new GUI:
+
 - **RIGHT CLICK** to preview with Viewer (resets Viewer on close)
 - **SHIFT+CLICK:** select and create multiple Stamps
 - **ALT+CLICK:** open color quick menu to colorize Anchor
@@ -17,6 +20,7 @@ within the new GUI:
 - **CTRL+ALT+CLICK:** jump/cycle through Stamps
 
 and outside the GUI:
+
 - **CTRL+STAMPS_SHORTCUT:** with one or multiple Anchors selected, set a new color
 - **CTRL+STAMPS_SHORTCUT:** with Stamp selected, will jump to it's anchor
 - **SHIFT+STAMPS_SHORTCUT:** with one or multiple Anchors or Stamps selected, will select all stamps of their/that anchor
