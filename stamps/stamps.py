@@ -20,7 +20,7 @@ date = "Nov 2023"
 STAMP_DEFAULTS = {"note_font_size": 20, "hide_input": 0}
 ANCHOR_DEFAULTS = {
     "tile_color": int("%02x%02x%02x%02x" % (255, 255, 255, 1), 16),
-    "autolabel": '"<center><font face=Verdana><b>"+nuke.thisNode().knob("title").value()+"</b>\\n<font size =1>("+("Hidden " if nuke.thisNode().knob("disable").value() else "")+"Anchor)</font></center>"',
+    "autolabel": '"<center><font face=Verdana><b>"+nuke.thisNode().knob("title").value()+"</b>\\n<font size =1>"+("<font color=\\"yellow\\">(Hidden " if nuke.thisNode().knob("disable").value() else "(")+"Anchor)</font></center>"',
     "knobChanged": "stamps.anchorKnobChanged()",
     "onCreate": "if nuke.GUI:\n    try:\n        import stamps; stamps.anchorOnCreate()\n    except Exception:\n        pass",
     "onDestroy": "import stamps; stamps.anchorDestroy()",
@@ -100,7 +100,14 @@ def getColorFromTags(tags=""):
 
 def setColorFromAnchor(Wired):
     """gets overriden by stamps_config if it exists"""
-    pass
+    n = Wired
+    anchor = n.dependencies(nuke.HIDDEN_INPUTS)[0]
+    anchor_color = anchor["tile_color"].getValue()
+
+    if anchor_color == int("%02x%02x%02x%02x" % (255, 255, 255, 1), 16):
+        n["tile_color"].setValue(16777217)
+    else:
+        n["tile_color"].setValue(int(anchor_color))
 
 
 try:
@@ -447,7 +454,8 @@ def anchorKnobChanged():
     elif kn == "tile_color":
         children = anchorWireds(n)
         for child in children:
-            child.knob("tile_color").setValue(n.knob("tile_color").value())
+            # child.knob("tile_color").setValue(n.knob("tile_color").value())
+            setColorFromAnchor(child)
 
     elif kn == "disable":
         if n.knob("disable_save"):
@@ -515,6 +523,8 @@ def anchorOnCreate():
             "line3",
             "version",
             "disable",
+            "updateTitle",
+            "updateTags",
         ]:
             k.setFlag(0x0000000000000400)
     try:
@@ -562,6 +572,18 @@ def retitleAnchor(ref=""):
         return None
 
 
+def get_dependent_wireds(anchor):
+    """
+    Returns a list of wired stamps connected to the supplied anchor
+    """
+
+    # compatibility with old anchors
+    if isinstance(anchor, str):
+        anchor = nuke.toNode(anchor)
+
+    return anchor.dependent(nuke.HIDDEN_INPUTS, forceEvaluate=False)
+
+
 def retitleWired(anchor=""):
     """
     Retitle wired stamps connected to supplied anchor
@@ -570,22 +592,24 @@ def retitleWired(anchor=""):
         return
     try:
         anchor_title = anchor["title"].value()
-        anchor_name = anchor.name()
-        for nw in allWireds():
-            if nw["anchor"].value() == anchor_name:
-                nw["title"].setValue(anchor_title)
-                nw["prev_title"].setValue(anchor_title)
+        dependent_nodes = get_dependent_wireds(anchor)
+        for nw in dependent_nodes:
+            nw["title"].setValue(anchor_title)
+            nw["prev_title"].setValue(anchor_title)
         return True
     except Exception:
         pass
 
 
-def wiredSelectSimilar(anchor_name=""):
-    if anchor_name == "":
+def wiredSelectSimilar(anchor=""):
+    if anchor == "":
         anchor_name = nuke.thisNode().knob("anchor").value()
-    for i in allWireds():
-        if i.knob("anchor").value() == anchor_name:
-            i.setSelected(True)
+        anchor = nuke.toNode(anchor_name)
+
+    dependent_nodes = get_dependent_wireds(anchor)
+
+    for i in dependent_nodes:
+        i.setSelected(True)
 
 
 def wiredReconnect(n=""):
@@ -816,39 +840,40 @@ def wiredReconnectBySelectionSelected():
 def anchorReconnectWired(anchor=""):
     if anchor == "":
         anchor = nuke.thisNode()
-    anchor_name = anchor.name()
-    for i in allWireds():
-        if i.knob("anchor").value() == anchor_name:
-            reconnectErrors = 0
-            try:
-                i.setInput(0, anchor)
-            except Exception:
-                reconnectErrors += 1
-            finally:
-                if reconnectErrors > 0:
-                    nuke.message("Couldn't reconnect {} nodes".format(str(reconnectErrors)))
+    dependent_nodes = get_dependent_wireds(anchor)
+
+    for i in dependent_nodes:
+        reconnectErrors = 0
+        try:
+            i.setInput(0, anchor)
+        except Exception:
+            reconnectErrors += 1
+        finally:
+            if reconnectErrors > 0:
+                nuke.message("Couldn't reconnect {} nodes".format(str(reconnectErrors)))
 
 
 def wiredZoomNext(anchor_name="", no_error=False):
     if anchor_name == "":
         anchor_name = nuke.thisNode().knob("anchor").value()
     anchor = nuke.toNode(anchor_name)
+    dependent_nodes = get_dependent_wireds(anchor)
+
     showing_knob = anchor.knob("showing")
     showing_value = showing_knob.value()
     i = 0
-    for ni in allWireds():
-        if ni.knob("anchor").value() == anchor_name:
-            if i == showing_value:
-                nuke.zoom(
-                    1.5,
-                    [
-                        ni.xpos() + ni.screenWidth() / 2,
-                        ni.ypos() + ni.screenHeight() / 2,
-                    ],
-                )
-                showing_knob.setValue(i + 1)
-                return
-            i += 1
+    for ni in dependent_nodes:
+        if i == showing_value:
+            nuke.zoom(
+                1.5,
+                [
+                    ni.xpos() + ni.screenWidth() / 2,
+                    ni.ypos() + ni.screenHeight() / 2,
+                ],
+            )
+            showing_knob.setValue(i + 1)
+            return
+        i += 1
     showing_knob.setValue(0)
     if not no_error:
         nuke.message("Couldn't find any more similar wired stamps.")
@@ -862,7 +887,7 @@ def anchorSelectWireds(anchor=""):
             pass
     if isAnchor(anchor):
         anchor.setSelected(False)
-        wiredSelectSimilar(anchor.name())
+        wiredSelectSimilar(anchor)
 
 
 def anchorWireds(anchor=""):
@@ -873,12 +898,7 @@ def anchorWireds(anchor=""):
         except Exception:
             pass
     if isAnchor(anchor):
-        try:
-            nn = anchor["prev_name"].value()
-        except Exception:
-            nn = anchor.name()
-        # "No Anchor" is for stamps that have been disconnected from their anchor
-        children = [i for i in allWireds() if i.knob("anchor").value() == nn]
+        children = get_dependent_wireds(anchor)
         return children
 
 
@@ -967,8 +987,13 @@ def anchor(title="", tags="", input_node="", node_type="2D"):
     tags_knob.setTooltip(
         "Comma-separated tags you can define for each Anchor, that will help you find it when invoking the Stamp Selector by pressing the Stamps shortkey with nothing selected."
     )
+    buttonUpdateTitle = nuke.PyScript_Knob("updateTitle", "get Title from Input", "stamps.updateTitle(nuke.thisNode())")
+    buttonUpdateTitle.setTooltip("Updates this Anchors Title based on it's current input")
+    buttonUpdateTitle.setFlag(nuke.STARTLINE)
+    buttonUpdateTags = nuke.PyScript_Knob("updateTags", "get Tags from Input", "stamps.updateTags(nuke.thisNode())")
+    buttonUpdateTags.setTooltip("Updates this Anchors Tags based on it's current input")
 
-    for k in [anchorTab_knob, identifier_knob, title_knob, prev_title_knob, prev_name_knob, showing_knob, tags_knob]:
+    for k in [anchorTab_knob, identifier_knob, title_knob, prev_title_knob, prev_name_knob, showing_knob, tags_knob, buttonUpdateTitle, buttonUpdateTags]:
         n.addKnob(k)
 
     n.addKnob(nuke.Text_Knob("line1", "", ""))  # Line
@@ -977,7 +1002,7 @@ def anchor(title="", tags="", input_node="", node_type="2D"):
     stampsLabel_knob.setFlag(nuke.STARTLINE)
 
     # Buttons
-    buttonSelectStamps = nuke.PyScript_Knob("selectStamps", "select", "stamps.wiredSelectSimilar(nuke.thisNode().name())")
+    buttonSelectStamps = nuke.PyScript_Knob("selectStamps", "select", "stamps.wiredSelectSimilar(nuke.thisNode())")
     buttonSelectStamps.setTooltip("Select all of this Anchor's Stamps.")
     buttonReconnectStamps = nuke.PyScript_Knob("reconnectStamps", "reconnect", "stamps.anchorReconnectWired()")
     buttonSelectStamps.setTooltip("Reconnect all of this Anchor's Stamps.")
@@ -2301,11 +2326,11 @@ def allAnchors(selection=""):
 
 
 def allWireds(selection=""):
-    nodes = nuke.allNodes()
     if selection == "":
+        nodes = nuke.allNodes()
         wireds = [a for a in nodes if isWired(a)]
     else:
-        wireds = [a for a in nodes if a in selection and isWired(a)]
+        wireds = [a for a in selection if isWired(a)]
     return wireds
 
 
@@ -2448,7 +2473,8 @@ def nodesFromScript(script=""):
 def stampCount(anchor_name=""):
     if anchor_name == "":
         return len(allWireds())
-    stamps = [s for s in allWireds() if s["anchor"].value() == anchor_name]
+    anchor = nuke.toNode(anchor_name)
+    stamps = get_dependent_wireds(anchor)
     return len(stamps)
 
 
@@ -2792,6 +2818,7 @@ def stampBuildMenus():
 
         m.addCommand("Edit/Stamps/show connections", "stamps.showConnections()", "shift+" + STAMPS_SHORTCUT, shortcutContext=2)
         m.addCommand("Edit/Stamps/Jump to Anchor | Change Anchor Color", "stamps.jumpORcolor()", "ctrl+" + STAMPS_SHORTCUT, shortcutContext=2)
+        m.menu("Edit").menu("Stamps").addSeparator()
 
         createWHotboxButtons()
 
@@ -2862,7 +2889,7 @@ def showConnections():
             anchorSelectWireds(n)
 
         elif isWired(n):
-            wiredSelectSimilar(n.knob("anchor").getValue())
+            wiredSelectSimilar(nuke.toNode(n.knob("anchor").getValue()))
 
 
 def jumpKeepingPreviousSelection(node):
@@ -2916,6 +2943,53 @@ def change_color_on_anchors():
     if selected_nodes and all([isAnchor(node) for node in selected_nodes]):
         labelConnectorForStamps.showColorSelectionUI(selected_nodes)
         return
+
+
+def updateTitle(node):
+    """
+    Checks the current input of an anchor and updates the title.
+    Behaves the same as if a new Anchor would be created from this input.
+    """
+    if not isAnchor(node):
+        nuke.message("Please select an Anchor")
+        return
+
+    default_title = getDefaultTitle(realInput(node, stopOnLabel=True, mode="title"))
+    try:
+        custom_default_title = defaultTitle(node)
+        if custom_default_title:
+            default_title = str(custom_default_title)
+    except:
+        pass
+
+    node["title"].setValue(default_title)
+
+
+def updateTags(node):
+    """
+    Checks the current input of an anchor and updates the tags.
+    Behaves the same as if a new Anchor would be created from this input.
+    """
+    if not isAnchor(node):
+        nuke.message("Please select an Anchor")
+        return
+    default_tags = list(set([nodeType(realInput(node, mode="tags"))]))
+    inputNode = realInput(node)
+    if inputNode.Class() in ["ScanlineRender"]:
+        default_tags += ["2D", "Deep"]
+    try:
+        custom_default_tags = defaultTags(inputNode)
+        if custom_default_tags:
+            if KEEP_ORIGINAL_TAGS:
+                default_tags += custom_default_tags
+            else:
+                default_tags = custom_default_tags
+    except:
+        pass
+
+    default_tags = list(filter(None, list(dict.fromkeys(default_tags))))
+    default_tags = ", ".join(default_tags + [""])
+    node["tags"].setValue(default_tags)
 
 
 def goStampsLabelConnector():

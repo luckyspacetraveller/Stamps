@@ -75,7 +75,7 @@ def getColorFromTags(tags=""):
 
     tags = tags.lower()
 
-    if "roto" in tags or "rotogroup" in tags or "mask" in tags or "crypto" in tags:
+    if any(tag in tags for tag in ["roto", "rotogroup", "mask", "crypto"]):
         return COLOR_LIST["Green"]
     elif "plates" in tags:
         return COLOR_LIST["Yellow"]
@@ -87,17 +87,19 @@ def getColorFromTags(tags=""):
     return None
 
 
-def setColorFromAnchor(Wired):
-    """set the color of the wired node to the color of the anchor node"""
+# moved to stamps.py
+# use this to override the color of the wired node based on the anchor node
+# def setColorFromAnchor(Wired):
+#     """set the color of the wired node to the color of the anchor node"""
 
-    n = Wired
-    anchor = n.dependencies(nuke.HIDDEN_INPUTS)[0]
-    anchor_color = anchor["tile_color"].getValue()
+#     n = Wired
+#     anchor = n.dependencies(nuke.HIDDEN_INPUTS)[0]
+#     anchor_color = anchor["tile_color"].getValue()
 
-    if anchor_color == int("%02x%02x%02x%02x" % (255, 255, 255, 1), 16):
-        n["tile_color"].setValue(16777217)
+#     if anchor_color == int("%02x%02x%02x%02x" % (255, 255, 255, 1), 16):
+#         n["tile_color"].setValue(16777217)
 
-    n["tile_color"].setValue(int(anchor_color))
+#     n["tile_color"].setValue(int(anchor_color))
 
 
 def defaultTitle(node):
@@ -145,8 +147,20 @@ def defaultTags(node):
 
     # Here's an example:
     node_class = node.Class()
-    if node_class == "Write":
-        tags.append("File Out")
+
+    if node_class == "Cryptomatte":
+        tags.append("crypto")
+
+    elif node_class == "Roto":
+        tags.append("roto")
+
+    elif node_class == "Read":
+        file = node.knob("file").value().lower()
+        if "roto" in file:
+            tags.append("rotogroup")
+
+    elif "Camera" in node_class:
+        tags.append("camera")
 
     # Now, the list of tags for whenever we create a Stamp on a Write node, will contain "File Out" by default.
 
