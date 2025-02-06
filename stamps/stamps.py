@@ -23,7 +23,7 @@ ANCHOR_DEFAULTS = {
     "autolabel": '"<center><font face=Verdana><b>"+nuke.thisNode().knob("title").value()+"</b>\\n<font size =1>"+("<font color=\\"yellow\\">(Hidden " if nuke.thisNode().knob("disable").value() else "(")+"Anchor)</font></center>"',
     "knobChanged": "stamps.anchorKnobChanged()",
     "onCreate": "if nuke.GUI:\n    try:\n        import stamps; stamps.anchorOnCreate()\n    except Exception:\n        pass",
-    "onDestroy": "import stamps; stamps.anchorDestroy()",
+    "onDestroy": "if nuke.GUI:\n    try:\n        import stamps; stamps.anchorDestroy()\n    except Exception:\n        pass",
 }
 WIRED_DEFAULTS = {
     "tile_color": int("%02x%02x%02x%02x" % (1, 0, 0, 1), 16),
@@ -73,14 +73,12 @@ if sys.version_info[0] >= 3:
 
 # PySide import switch
 try:
-    if nuke.NUKE_VERSION_MAJOR < 11:
-        from PySide import QtCore
-        from PySide import QtGui
-        from PySide import QtGui as QtWidgets
-        from PySide.QtCore import Qt
-    else:
+    if nuke.NUKE_VERSION_MAJOR < 16:
         from PySide2 import QtCore, QtGui, QtWidgets
         from PySide2.QtCore import Qt
+    else:
+        from PySide6 import QtCore, QtGui, QtWidgets
+        from PySide6.QtCore import Qt
 except ImportError:
     from Qt import QtCore, QtGui, QtWidgets
 
@@ -541,14 +539,10 @@ def anchorOnCreate():
 
 
 def anchorDestroy():
-    if nuke.GUI:
-        try:
-            n = nuke.thisNode()
-            children = anchorWireds(n)
-            for i in children:
-                i.knob("anchor").setValue("No Anchor")
-        except ValueError:
-            pass
+    n = nuke.thisNode()
+    children = anchorWireds(n)
+    for i in children:
+        i.knob("anchor").setValue("No Anchor")
 
 
 def retitleAnchor(ref=""):

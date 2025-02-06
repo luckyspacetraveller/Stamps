@@ -159,6 +159,9 @@ def defaultTags(node):
         if "roto" in file:
             tags.append("rotogroup")
 
+        elif "crypto" in file:
+            tags.append("crypto")
+
     elif "Camera" in node_class:
         tags.append("camera")
 
