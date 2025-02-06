@@ -2084,7 +2084,6 @@ def backdropTags(node=None):
             label = re.sub("[\s]+", " ", label)
             label = re.sub("\.$", "", label)
             label = label.strip()
-
             tags[label] = b
 
     return tags
