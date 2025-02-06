@@ -23,7 +23,7 @@ ANCHOR_DEFAULTS = {
     "autolabel": '"<center><font face=Verdana><b>"+nuke.thisNode().knob("title").value()+"</b>\\n<font size =1>"+("<font color=\\"yellow\\">(Hidden " if nuke.thisNode().knob("disable").value() else "(")+"Anchor)</font></center>"',
     "knobChanged": "stamps.anchorKnobChanged()",
     "onCreate": "if nuke.GUI:\n    try:\n        import stamps; stamps.anchorOnCreate()\n    except Exception:\n        pass",
-    "onDestroy": "import stamps; stamps.anchorDestroy()",
+    "onDestroy": "if nuke.GUI:\n    try:\n        import stamps; stamps.anchorDestroy()\n    except Exception:\n        pass",
 }
 WIRED_DEFAULTS = {
     "tile_color": int("%02x%02x%02x%02x" % (1, 0, 0, 1), 16),
@@ -202,7 +202,7 @@ def wiredTagsAndBackdrops(n, updateSimilar=False):
         if not a:
             return
         a_tags = a["tags"].value().strip().strip(",")
-        a_bd = list(backdropTags(a).keys())
+        a_bd = backdropTags(a).keys()
         an = n.knob("anchor").value()
         if updateSimilar:
             ns = [i for i in allWireds() if i.knob("anchor").value() == an]
@@ -2090,8 +2090,8 @@ def backdropTags(node=None):
             label = re.sub("[\s]+", " ", label)
             label = re.sub("\.$", "", label)
             label = label.strip()
-
-            tags[label] = b
+            if not label in tags.keys():
+                tags[label] = b
 
     return tags
 
