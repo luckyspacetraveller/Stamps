@@ -1,4 +1,7 @@
+**Now compatible with Nuke 16.0 (Nuke 13.0 and above)**
+
 ## Stamps for Nuke with alternative GUI
+
 
 Here is a quick summary of the changes made to the original code:
 
